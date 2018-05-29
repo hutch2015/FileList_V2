@@ -1,0 +1,9 @@
+<design:component >
+	<design:attribute name="column1" datasource="apex://FileListDesignController" default="Title"/>
+    <design:attribute name="column2" datasource="apex://FileListDesignController" default="Owner.Name"/>
+    <design:attribute name="column3" datasource="apex://FileListDesignController" default="LastModifiedDate"/>
+    <design:attribute name="column4" datasource="apex://FileListDesignController" default="ContentSize"/>
+    <design:attribute name="column5" datasource="apex://FileListDesignController" />
+    <design:attribute name="column6" datasource="apex://FileListDesignController" />
+    <design:attribute name="column7" datasource="apex://FileListDesignController" /> 
+</design:component>

@@ -1,0 +1,11 @@
+.THIS .disabled {
+   pointer-events: none;
+   opacity : 0.4;
+}
+.THIS #edit {
+   border-top: none;
+}
+.THIS #share-dialogbox {    
+    padding-top: 125px !important;
+    padding-bottom: 30px !important;
+}

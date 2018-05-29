@@ -1,0 +1,140 @@
+<aura:component controller="FileListController" implements="force:appHostable,flexipage:availableForAllPageTypes,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global" >
+    <!-- Attributes that match the Design attributes -->
+    <aura:attribute name="column1" type="String"/>
+    <aura:attribute name="column2" type="String"/>
+    <aura:attribute name="column3" type="String"/>
+    <aura:attribute name="column4" type="String"/>
+    <aura:attribute name="column5" type="String"/>
+    <aura:attribute name="column6" type="String"/>
+    <aura:attribute name="column7" type="String"/>
+    
+    <!-- Attributes to get the file data -->
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="attachments" type="ContentVersion[]"/>
+    <aura:attribute name="attachmentsLength" type="String" default="0"/>
+    
+    <!-- Attributes to navigate to the next component-->
+    <aura:attribute name="orgUrl" type="String"/>
+    <aura:attribute name="objectHomeUrl" type="String"/>
+    <aura:attribute name="hostName" type="String"/>
+    
+    <!-- Attributes for uploading file-->
+    <aura:attribute name="isOpen" type="Boolean" default="false" />
+    <aura:attribute name="showLoadingSpinner" type="boolean" default="false" />
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="fileLength" type="Integer" default="0" />
+    
+    <aura:dependency resource="markup://lightning:openFiles" type="EVENT"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <!-- Card to display attachment related to the SObject-->
+    <article class="slds-card" style="border:0.5px solid #d3d3d3">
+        <div class="slds-card__header slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate slds-p-left_small">
+                <div class="slds-media__figure">
+                    <lightning:icon class="icn" iconName="standard:file" variant="bare" size="small"/>
+                </div>
+                <!-- Section to navigate to next component -->
+                <div class="slds-media__body">
+                    <a onclick="{!c.navigate}" style="color:#000">
+                        <span class="slds-page-header__title slds-truncate slds-align-middle slds-text-heading_small" title="File">Files</span>
+                        <span class="slds-page-header__title slds-truncate slds-align-middle slds-m-left_xx-small slds-text-heading_small">({!v.attachmentsLength})</span>
+                    </a>
+                </div>
+            </header>
+            <!-- Upload file section -->
+            <div class="slds-no-flex slds-p-right_small">
+                <button class="slds-button slds-button_neutral" onclick="{!c.createRecord}">Add Files</button>
+            </div>
+        </div>
+        <!-- Section used to display the attachments as tiles -->
+        <div class="slds-grid slds-wrap small-spinner">
+            <aura:iteration items="{!v.attachments}" var="attachment">
+                <div class="slds-col slds-size_1-of-2 slds-p-vertical_small">
+                    <div class="slds-media slds-media_center slds-has-flexi-truncate slds-p-horizontal_small" id="{!attachment.ContentDocumentId}" 
+                         onclick="{!c.openFile}">
+                        <div class="slds-media__figure">
+                            <aura:if isTrue="{!or(or(attachment.FileExtension == 'png',attachment.FileExtension == 'jpg'),attachment.FileExtension == 'jpeg')}">
+                                <lightning:icon class="icn" iconName="doctype:image" variant="bare" size="medium"/>
+                                <aura:set attribute="else">
+                                    <aura:if isTrue="{!or(or(or(attachment.FileExtension == 'json',attachment.FileExtension == 'java'),attachment.FileExtension == 'class'),attachment.FileExtension == 'js')}">
+                                        <lightning:icon class="icn" iconName="doctype:unknown" variant="bare" size="medium"/>
+                                        <aura:set attribute="else">
+                                            <aura:if isTrue="{!or(attachment.FileExtension == 'docx',attachment.FileExtension == 'doc')}">
+                                                <lightning:icon class="icn" iconName="doctype:word" variant="bare" size="medium"/>
+                                                <aura:set attribute="else">
+                                                    <lightning:icon class="icn" iconName="{!'doctype:' + attachment.FileExtension}" variant="bare" size="medium"/>
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                        <div class="slds-media__body slds-media_center slds-has-flexi-truncate">
+                            <a>
+                                <span class="slds-page-header__title slds-truncate slds-align-middle slds-text-body_regular" title="{!attachment.Title}">{!attachment.Title}</span>
+                            </a>    
+                            <p class="slds-text-title">
+                                <ui:outputDate value="{!attachment.CreatedDate}"/> •
+                                <aura:if isTrue="{!and(lessthan(attachment.ContentSize,1024),greaterthan(attachment.ContentSize,0))}"><ui:outputNumber value="{!attachment.ContentSize}" format="0"/> B</aura:if>
+                                <aura:if isTrue="{!and(lessthan(attachment.ContentSize,1024*1024),greaterthan(attachment.ContentSize,1024))}"><ui:outputNumber value="{!attachment.ContentSize/1024}" format="0"/> KB</aura:if>
+                                <aura:if isTrue="{!and(lessthan(attachment.ContentSize,1024*1024*1024),greaterthan(attachment.ContentSize,1024*1024))}"><ui:outputNumber value="{!attachment.ContentSize/(1024*1024)}" format=".0"/> MB</aura:if>
+                                <aura:if isTrue="{!and(lessthan(attachment.ContentSize,1024*1024*1024*1024),greaterthan(attachment.ContentSize,1024*1024*1024))}"><ui:outputNumber value="{!attachment.ContentSize/(1024*1024*1024)}" format=".0"/> GB</aura:if> • 
+                                {!attachment.FileExtension} 
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </aura:iteration>
+        </div>
+        <footer class="slds-card__footer">
+            <a onclick="{!c.navigate}">
+                <span class="slds-page-header__title slds-truncate slds-align-middle slds-text-body_regular" title="File">View All</span>
+            </a>
+        </footer>
+    </article>
+    <!-- Upload file dialog box section -->
+    <aura:if isTrue="{!v.isOpen}">
+        <div role="dialog" tabindex="-1" aria-labelledby="header99" class="slds-modal slds-fade-in-open ">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading--medium">Search Files </h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <lightning:fileUpload label="Attach receipt"
+                                name="fileUploader" 
+                                multiple="true" 
+                                recordId="{!v.recordId}" 
+                                onuploadfinished="{!c.handleUploadFinished}" />
+                    
+                    <!--lightning:input aura:id="fileId" onchange="{!c.handleFilesChange}" type="file" name="file" label="Upload Attachment" multiple="true"/>
+                    <div class="slds-text-body_small slds-text-color_error">{!v.fileName} </div>
+                    
+                    <aura:if isTrue="{!v.showLoadingSpinner}">
+                        <div class="slds-text-body_small slds-text-color_error">Uploading... 
+                            <img src="/auraFW/resources/aura/images/spinner.gif" class="spinner-img" alt="Loading"/>'
+                        </div>
+                    </aura:if>
+                    
+                    <br/-->
+                </div>
+                <div class="slds-modal__footer">
+                    <button class="slds-button slds-button--neutral" onclick="{!c.closeModel}" >Cancel</button>
+                    <aura:if isTrue="{!v.fileLength > 0}">
+                        <button class="slds-button slds-button--brand" onclick="{!c.doSave}">Add</button>
+                        <aura:set attribute="else">
+                            <button class="slds-button slds-button--brand" disabled="true" onclick="{!c.doSave}">Add</button>
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop--open"></div> 
+    </aura:if>
+    
+</aura:component>

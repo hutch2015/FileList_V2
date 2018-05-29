@@ -1,0 +1,690 @@
+<aura:component controller="FileListController" implements="force:appHostable,flexipage:availableForAllPageTypes,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global" >
+    <!-- Attributes that match the Design attributes -->
+    <aura:attribute name="column1" type="String"/>
+    <aura:attribute name="column2" type="String"/>
+    <aura:attribute name="column3" type="String"/>
+    <aura:attribute name="column4" type="String"/>
+    <aura:attribute name="column5" type="String"/>
+    <aura:attribute name="column6" type="String"/>
+    <aura:attribute name="column7" type="String"/>
+    
+    <!-- Attributes to get the file data -->
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="attachments" type="ContentVersion[]"/>
+    <aura:attribute name="attachmentsLength" type="Integer" default="0"/>
+    
+    <!-- Attributes to resize the column width-->
+    <aura:attribute name="mouseStart" type="string" />
+    <aura:attribute name="oldWidth" type="string" />
+    <aura:attribute name="resetWidth" type="Boolean" default="false" />
+    
+    <!-- Attributes for sorting data-->
+    <aura:attribute name="minutes" type="Integer" default="-1"/>
+    <aura:attribute name="sortedBy" type="string" default="Title" />
+    <aura:attribute name="sortedDirection" type="string" default="desc" />
+    
+    <!-- Attributes to get breadcrumb details-->
+    <aura:attribute name="parentRecordName" type="string" />
+    <aura:attribute name="parentEntity" type="String"/>
+    <aura:attribute name="objectName" type="String"/>
+    <aura:attribute name="objectHomeUrl" type="String"/>
+    
+    <!-- Attributes for uploading file-->
+    <aura:attribute name="userId" type="String"/>
+    <aura:attribute name="isFileOpen" type="Boolean" default="false" />
+    <aura:attribute name="showLoadingSpinner" type="boolean" default="false" />
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="fileLength" type="Integer" default="0" />
+    
+    <!-- Attributes for delete a file-->
+    <aura:attribute name="rowData" type="ContentVersion"/>
+    <aura:attribute name="isOpen" type="Boolean" default="false" />
+    <aura:attribute name="contentDocumentId" type="id"/>
+    
+    <!-- Attributes to create drop down actions in file row-->
+    <aura:attribute name="hostName" type="String"/>
+    <aura:attribute name="ownerActions" type="List"/>
+    <aura:attribute name="viewerActions" type="List"/>
+    <aura:attribute name="collaboratorActions" type="List"/>
+    <aura:attribute name="userPermission" type="Boolean"/>
+    <aura:attribute name="userSharePermissionData" type="ContentDocumentLink[]"/>
+    <aura:attribute name="viewAll" type="Boolean" default="false"/>
+    <aura:attribute name="linkedEntityId" type="id"/>
+    
+    <!-- Attributes for viewing and editing data-->
+    <aura:attribute name="fieldsOne" type="List"/>
+    <aura:attribute name="fieldsTwo" type="List"/>
+    
+    <!-- Attributes for sharing data-->
+    <aura:attribute name="openShare" type="Boolean" default="false" />
+    <aura:attribute name="unshare" type="Boolean" default="false" />
+    <aura:attribute name="openAccessView" type="Boolean" default="false" />
+    <aura:attribute name="selectedLookUpRecords" type="sObject[]" default="[]"/>
+    <aura:attribute name="selectedLookUpRecordsLength" type="Integer" default="0"/>
+    <aura:attribute name="accessContentData" type="List" />
+    <aura:attribute name="contentOwnerId" type="String"/>
+    <aura:attribute name="contentVersionId" type="String"/>
+    <aura:attribute name="searchObjectName" type="String" default="user"/>
+    <aura:attribute name="searchIconName" type="String" default="standard:user"/>
+    <aura:attribute name="ownerId" type="String"/>
+    <aura:attribute name="userName" type="String"/>
+    <aura:attribute name="options" type="List" />
+    <aura:attribute name="infoText" type="String" default="Viewer"/>
+    <aura:attribute name="sharingOption" type="String"/>
+    <aura:handler name="selectChange" event="c:SelectChange" action="{!c.selectUpdateChange}"/>
+    <aura:handler name="onSaveSuccess" event="force:recordSaveSuccess" action="{!c.refresh}"/>
+    <aura:handler event="force:showToast" action="{!c.refresh}" />
+    
+    <aura:dependency resource="markup://lightning:openFiles" type="EVENT"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <div class="slds-page-header">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__body">
+                        <nav  role="navigation" aria-label="Breadcrumbs">
+                            <ol class="slds-breadcrumb slds-list_horizontal slds-wrap">
+                                <li class="slds-breadcrumb__item "><a href="{!'/one/one.app#/sObject/' +v.objectName+ '/list'}">{!v.parentEntity}</a></li>
+                                <li class="slds-breadcrumb__item "><a href="{!v.objectHomeUrl + '/view'}">{!v.parentRecordName}</a></li>
+                            </ol>
+                        </nav>
+                        <h1 class="slds-page-header__title slds-p-right_x-small">
+                            <span class="slds-grid slds-has-flexi-truncate slds-grid_vertical-align-center">
+                                <span class="slds-truncate" title="Files">Files</span>	
+                            </span>
+                        </h1>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom_xx-small">
+                <div class="slds-button">
+                    <button class="slds-button slds-button_neutral" onclick="{!c.createRecord}">Add Files</button>
+                </div>
+            </div>
+        </div>
+        <div class="slds-grid">
+            <div class="slds-col slds-align-middle">
+                <p class="slds-text-body_small">{!v.attachmentsLength} items • Sorted By {!v.sortedBy} • Updated <aura:if isTrue="{!lessthan(v.minutes, 1) }"> a few seconds <aura:set attribute="else"><aura:if isTrue="{!lessthan(v.minutes, 2)}"> a minute<aura:set attribute="else"> {!v.minutes} minutes</aura:set></aura:if></aura:set></aura:if> ago</p>
+            </div>
+            <div class="slds-col slds-no-flex slds-grid slds-align-bottom">
+                <aura:if isTrue="{!v.viewAll}">
+                    <button class="slds-button slds-m-right_small" title="Collapse all" onclick="{!c.viewOrCollapseAllData}">
+                        <lightning:icon class="slds-button__icon slds-button_icon-brand" title="Collapse all" iconName="utility:dash" variant="inverse" size="x-small"/>
+                    </button>
+                    <aura:set attribute="else">
+                        <button class="slds-button slds-m-right_small" title="Expand all" onclick="{!c.viewOrCollapseAllData}">
+                            <lightning:icon class="slds-button__icon slds-button_icon-brand" title="Expand all" iconName="utility:add" variant="inverse" size="x-small"/>
+                        </button>
+                    </aura:set>
+                </aura:if>
+                <div class="slds-dropdown-trigger slds-dropdown-trigger_click slds-m-right_small" aura:id="settings" onclick="{!c.dropDown}">
+                    <button class="slds-button slds-button_icon slds-button_icon-container-more slds-button_neutral" tabindex="0" aria-haspopup="true" title="List View Controls">
+                        <lightning:icon class="icn" iconName="utility:settings" size="x-small"/>
+                        <lightning:icon class="icn" iconName="utility:down" size="xx-small"/>
+                    </button>
+                    <div class="slds-dropdown slds-dropdown_right">
+                        <ul class="slds-dropdown__list" role="menu" onfocusout="{!c.dropDown}">
+                            <li class="slds-dropdown__header slds-truncate" title="List View Controls" role="separator">
+                                <span class="slds-text-title_caps">List View Controls</span>
+                            </li>
+                            <aura:if isTrue="{!v.resetWidth}">
+                                <li class="slds-dropdown__item" role="presentation">
+                                    <a href="javascript:void(0);" onclick="{!c.resetColumnWidth}" role="menuitem" tabindex="0">
+                                        <span class="slds-truncate" title="Reset Column Width">Reset Column Widths</span>
+                                    </a>
+                                </li>
+                                <aura:set attribute="else">
+                                    <li class="slds-dropdown__item disabled" role="presentation">
+                                        <a href="javascript:void(0);" role="menuitem" tabindex="0">
+                                            <span class="slds-truncate" title="Reset Column Width">Reset Column Widths</span>
+                                        </a>
+                                    </li>
+                                </aura:set>
+                            </aura:if>
+                        </ul>
+                    </div>
+                </div>
+                <button class="slds-button slds-button_neutral slds-button_icon-container-more" title="Refresh" onclick="{!c.refresh}">
+                    <lightning:icon class="slds-button__icon" iconName="utility:refresh" size="x-small"/>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div>
+        <table aura:id="table--view" class="slds-table slds-cell-buffer_left slds-table_bordered slds-resizable slds-table_resizable-cols slds-table_fixed-layout " role="grid">
+            <thead>
+                <tr class="slds-line-height_reset">
+                    <th class="slds-text-align_right slds-cell-wrap" scope="col" style="width: 3.25rem;">
+                        <div class="slds-th__action slds-th__action_form">
+                        </div>
+                    </th>
+                    <th id="{!v.column1 + '--' + v.column1 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-has-button-menu slds-is-resizable slds-text-title_caps slds-cell-wrap slds-size_1-of-3" aria-label="Title" scope="col">
+                        <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                            <span class="slds-truncate" title="{!v.column1}">{!v.column1}</span>
+                            <div class="slds-icon_container">
+                                <aura:if isTrue="{!and(v.sortedBy == v.column1,v.sortedDirection == 'desc')}">
+                                    <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                    <aura:set attribute="else">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </a>
+                        <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                        <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Title">
+                            <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                        </button>
+                        <div class="slds-resizable">
+                            <input type="range" min="20" max="1000" aria-label="Title column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-169" tabindex="0" />
+                            <span class="slds-resizable__handle" id="{!v.column1}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                <span class="slds-resizable__divider"></span>
+                            </span>
+                        </div>
+                    </th>
+                    <aura:if isTrue="{!v.column2 != null}">
+                        <th id="{!v.column2 + '--' + v.column2 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-has-button-menu slds-is-resizable slds-text-title_caps slds-cell-wrap" aria-label="Owner" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-assistive-text">Sort by: </span>
+                                <span class="slds-truncate" title="{!v.column2}">{!v.column2}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column2,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Owner">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Owner column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-170" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column2}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <aura:if isTrue="{!v.column3 != null}">
+                        <th id="{!v.column3 + '--' + v.column3 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-has-button-menu slds-is-resizable slds-text-title_caps slds-cell-wrap" aria-label="Last Modified" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-truncate" title="{!v.column3}">{!v.column3}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column3,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Last Modified">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Last Modified column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-171" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column3}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <aura:if isTrue="{!v.column4 != null}">
+                        <th id="{!v.column4 + '--' + v.column4 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-is-resizable slds-has-button-menu slds-text-title_caps slds-cell-wrap" aria-label="Size" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-assistive-text">Sort by: </span>
+                                <span class="slds-truncate" title="{!v.column4}">{!v.column4}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column4,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Size">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Size column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-172" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column4}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <aura:if isTrue="{!v.column5 != null}">
+                        <th id="{!v.column5 + '--' + v.column5 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-is-resizable slds-has-button-menu slds-text-title_caps slds-cell-wrap" aria-label="Size" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-assistive-text">Sort by: </span>
+                                <span class="slds-truncate" title="{!v.column5}">{!v.column5}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column5,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Size">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Size column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-172" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column5}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <aura:if isTrue="{!v.column6 != null}">
+                        <th id="{!v.column6 + '--' + v.column6 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-is-resizable slds-has-button-menu slds-text-title_caps slds-cell-wrap" aria-label="Size" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-assistive-text">Sort by: </span>
+                                <span class="slds-truncate" title="{!v.column6}">{!v.column6}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column6,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Size">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Size column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-172" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column6}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <aura:if isTrue="{!v.column7 != null}">
+                        <th id="{!v.column7 + '--' + v.column7 + '--' + v.sortedDirection}" role="columnheader" onclick="{!c.updateColumnSorting}" class="slds-is-sortable slds-is-resizable slds-has-button-menu slds-text-title_caps slds-cell-wrap" aria-label="Size" scope="col">
+                            <a class="slds-th__action slds-text-link_reset" href="javascript:void(0);" role="button" tabindex="-1">
+                                <span class="slds-assistive-text">Sort by: </span>
+                                <span class="slds-truncate" title="{!v.column7}">{!v.column7}</span>
+                                <div class="slds-icon_container">
+                                    <aura:if isTrue="{!and(v.sortedBy == v.column7,v.sortedDirection == 'desc')}">
+                                        <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowup" size="x-small"/>
+                                        <aura:set attribute="else">
+                                            <lightning:icon class="slds-icon slds-icon_x-small slds-icon-text-default slds-is-sortable__icon" iconName="utility:arrowdown" size="x-small"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </a>
+                            <span class="slds-assistive-text" aria-live="assertive" aria-atomic="true">Sorted none</span>
+                            <button class="slds-button slds-button_icon slds-th__action-button slds-button_icon-x-small" tabindex="-1" title="Size">
+                                <lightning:icon class="slds-button__icon slds-button__icon_hint slds-button__icon_small" iconName="utility:chevrondown" size="x-small"/>
+                            </button>
+                            <div class="slds-resizable">
+                                <input type="range" min="20" max="1000" aria-label="Size column width" class="slds-resizable__input slds-assistive-text" id="cell-resize-handle-172" tabindex="-1" />
+                                <span class="slds-resizable__handle" id="{!v.column7}" onmousedown="{!c.calculateWidth}" ondrag="{!c.setNewWidth}">
+                                    <span class="slds-resizable__divider"></span>
+                                </span>
+                            </div>
+                        </th>
+                    </aura:if>
+                    <th scope="col" class="slds-cell-wrap" style="width: 3.25rem;">
+                        <div class="slds-th__action-button slds-button_icon-x-small">
+                            <span class="slds-assistive-text">Actions</span>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.attachments}" var="attachment" indexVar="index">
+                    <tr class="slds-hint-parent">
+                        <td class="slds-text-align_right slds-cell-wrap" role="gridcell">
+                            {!index + 1}
+                        </td>
+                        <th scope="row" tabindex="0" class="slds-cell-wrap">
+                            <div class="slds-media__figure" id="{!attachment.ContentDocumentId}" onclick="{!c.openFile}">
+                                <aura:if isTrue="{!or(or(attachment.FileExtension == 'png',attachment.FileExtension == 'jpg'),attachment.FileExtension == 'jpeg')}">
+                                    <lightning:icon class="icn" iconName="doctype:image" variant="bare" size="medium"/>
+                                    <aura:set attribute="else">
+                                        <aura:if isTrue="{!or(or(or(attachment.FileExtension == 'json',attachment.FileExtension == 'java'),attachment.FileExtension == 'class'),attachment.FileExtension == 'js')}">
+                                            <lightning:icon class="icn" iconName="doctype:unknown" variant="bare" size="medium"/>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!or(attachment.FileExtension == 'docx',attachment.FileExtension == 'doc')}">
+                                                    <lightning:icon class="icn" iconName="doctype:word" variant="bare" size="medium"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:icon class="icn" iconName="{!'doctype:' + attachment.FileExtension}" variant="bare" size="medium"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                    </aura:set>
+                                </aura:if>
+                                <span class="slds-p-left_medium slds-truncate" title="Title" ><a tabindex="-1" title="{!attachment.column1}">{!attachment.column1}</a></span>
+                            </div>
+                        </th>
+                        <aura:if isTrue="{!v.column2 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="Owner" id="{!attachment.OwnerId}" onclick="{!c.viewOwner}">
+                                    <a tabindex="-1" title="{!attachment.column2}">
+                                        {!attachment.column2}
+                                    </a>
+                                </div>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!v.column3 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="{!v.column3}">{!attachment.column3}</div>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!v.column4 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="{!v.column4}">
+                                    {!attachment.column4}
+                                </div>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!v.column5 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="{!v.column5}">
+                                    {!attachment.column5}
+                                </div>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!v.column6 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="{!v.column6}">
+                                    {!attachment.column6}
+                                </div>
+                            </td>
+                        </aura:if>
+                        <aura:if isTrue="{!v.column7 != null}">
+                            <td role="gridcell" class="slds-cell-wrap">
+                                <div class="slds-truncate" title="{!v.column7}">
+                                    {!attachment.column7}
+                                </div>
+                            </td>
+                        </aura:if>
+                        <td role="gridcell" class="slds-cell-wrap">
+                            <lightning:buttonMenu iconName="utility:down" iconSize="x-small" menuAlignment="right" alternativeText="Menu" onselect="{! c.handleMenuSelect }">
+                                <aura:if isTrue="{!or(v.userId == attachment.OwnerId, v.userPermission)}">
+                                    <aura:iteration var="action" items="{!v.ownerActions}">
+                                        <lightning:menuItem class="slds-text-link_reset" label="{!action.label}" value="{!attachment.Id +'--'+ attachment.ContentDocumentId +'--'+ action.value + '--' + attachment.OwnerId}"/>
+                                    </aura:iteration>
+                                    <aura:set attribute="else">
+                                        <aura:if isTrue="{!v.userSharePermissionDataLength > 0}">                                        
+                                            <aura:iteration var="userShare" items="{!v.userSharePermissionData}">
+                                                <aura:if isTrue="{!and(userShare.ContentDocumentId == attachment.ContentDocumentId, userShare.ShareType == 'C')}">
+                                                    <aura:iteration var="action" items="{!v.collaboratorActions}">
+                                                        <lightning:menuItem class="slds-text-link_reset" label="{!action.label}" value="{!attachment.Id +'--'+ attachment.ContentDocumentId +'--'+ action.value + '--' + attachment.OwnerId}"/>
+                                                    </aura:iteration>
+                                                </aura:if>
+                                                <aura:if isTrue="{!and(userShare.ContentDocumentId == attachment.ContentDocumentId, userShare.ShareType == 'V')}">
+                                                    <aura:iteration var="action" items="{!v.viewerActions}">
+                                                        <lightning:menuItem class="slds-text-link_reset" label="{!action.label}" value="{!attachment.Id +'--'+ attachment.ContentDocumentId +'--'+ action.value + '--' + attachment.OwnerId}"/>
+                                                    </aura:iteration>
+                                                </aura:if>
+                                            </aura:iteration>
+                                            <aura:set attribute="else">
+                                                <aura:iteration var="action" items="{!v.viewerActions}">
+                                                    <lightning:menuItem class="slds-text-link_reset" label="{!action.label}" value="{!attachment.Id +'--'+ attachment.ContentDocumentId +'--'+ action.value + '--' + attachment.OwnerId}"/>
+                                                </aura:iteration>
+                                            </aura:set>
+                                        </aura:if>
+                                    </aura:set>
+                                </aura:if>
+                                
+                            </lightning:buttonMenu>
+                        </td>
+                    </tr>
+                    <tr id="{!attachment.ContentDocumentId}" class="slds-hint-parent slds-hide">
+                        <td></td>
+                        <td colspan ="7">
+                            <force:recordView recordId="{!attachment.Id}"/>
+                        </td>
+                        <div class="slds-clearfix">
+                            <div class="slds-clearfix">
+                                <div id="{!attachment.ContentDocumentId}" class="slds-float_none slds-p-left_medium slds-p-top_small" onclick="{! c.close}">
+                                    <lightning:buttonIcon iconName="utility:close" variant="bare" alternativeText="Close"/>
+                                </div>
+                            </div>
+                        </div>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+    </div>
+    <aura:if isTrue="{!v.isOpen}">
+        <div role="dialog" tabindex="-1" aria-labelledby="header99" class="slds-modal slds-fade-in-open ">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading--medium">Delete File ?</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <p>Deleting a file also removes it from any records or posts it's attached to.</p>
+                </div>
+                <div class="slds-modal__footer">
+                    <button class="slds-button slds-button--neutral" onclick="{!c.closeModel}" >Cancel</button>
+                    <button class="slds-button slds-button--brand" id="{!v.contentDocumentId}" onclick="{!c.deleteRow}">Delete</button>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop--open"></div> 
+    </aura:if>
+    <aura:if isTrue="{!v.isFileOpen}">
+        <div role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open ">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading--medium">Search Files </h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <lightning:fileUpload label="Attach receipt"
+                                name="fileUploader" 
+                                multiple="true" 
+                                recordId="{!v.recordId}" 
+                                onuploadfinished="{!c.handleUploadFinished}" />
+                    <!--lightning:input aura:id="fileId" onchange="{!c.handleFilesChange}" type="file" name="file" label="Upload Attachment" multiple="true"/>
+                    <div class="slds-text-body_small slds-text-color_error">{!v.fileName} </div>
+                    
+                    <aura:if isTrue="{!v.showLoadingSpinner}">
+                        <div class="slds-text-body_small slds-text-color_error">Uploading... 
+                            <img src="/auraFW/resources/aura/images/spinner.gif" class="spinner-img" alt="Loading"/>'
+                        </div>
+                    </aura:if>
+                    
+                    <br/-->
+                </div>
+                <div class="slds-modal__footer">
+                    <button class="slds-button slds-button--neutral" onclick="{!c.closeModel}" >Cancel</button>
+                    <aura:if isTrue="{!v.fileLength > 0}">
+                        <button class="slds-button slds-button--brand" onclick="{!c.doSave}">Add</button>
+                        <aura:set attribute="else">
+                            <button class="slds-button slds-button--brand" disabled="true" onclick="{!c.doSave}">Add</button>
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </div>
+        </div>
+        <div class="slds-backdrop slds-backdrop--open"></div> 
+    </aura:if>
+    <aura:if isTrue="{!v.openShare}">
+        <div role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open ">
+            <div id="share-dialogbox" class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeModel}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading--medium">Share FileListHelper</h2>
+                </div>
+                <div class="slds-modal__content slds-p-around--medium">
+                    <div class="slds-float_right slds-m-left_medium slds-m-top_large" title="{!v.infoText}">
+                        <c:uiSelect options="{!v.options}" infoText="{!v.infoText}" disabled="false"/>
+                    </div>
+                    <div class="slds-float_left slds-m-left_xx-small slds-m-top_medium slds-p-top_x-small" >
+                        <div class="slds-dropdown-trigger slds-dropdown-trigger_click slds-is-close" aura:id="shareIcon" onclick="{!c.shareIconDropDown}">
+                            <button class="slds-button slds-button_icon slds-button_icon-container-more slds-button_neutral" tabindex="0" aria-haspopup="true" title="User" style="height:40px;">
+                                <lightning:icon class="slds-m-vertical_xx-small" iconName="{!v.searchIconName}" size="small"/>
+                                <lightning:icon class="icn" iconName="utility:down" size="xx-small"/>
+                            </button>
+                            <div class="slds-dropdown slds-dropdown_left">
+                                <ul class="slds-dropdown__list" role="menu">
+                                    <li class="slds-dropdown__item" id="user" onclick="{!c.setObject}" role="presentation">
+                                        <a href="javascript:void(0);" role="menuitem" tabindex="0">
+                                            <lightning:icon class="icn" iconName="standard:people" size="small"/>
+                                            <span class="slds-truncate slds-m-left_small" title="People">People</span>
+                                        </a>
+                                    </li>
+                                    <li class="slds-dropdown__item" id="collaborationgroup" onclick="{!c.setObject}" role="presentation">
+                                        <a href="javascript:void(0);" role="menuitem" tabindex="0">
+                                            <lightning:icon class="icn" iconName="standard:groups" size="small"/>
+                                            <span class="slds-truncate slds-m-left_small" title="Groups">Groups</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <c:reUsableMultiSelectLookup objectAPIName="{!v.searchObjectName}"
+                                                 IconName="{!v.searchIconName}"
+                                                 listSelectedRecords="{!v.selectedLookUpRecords}"
+                                                 listSelectedRecordsLength="{!v.selectedLookUpRecordsLength}" 
+                                                 ownerId="{!v.ownerId}"
+                                                 label="Share With"/>
+                    
+                    <aura:if isTrue="{!greaterthan(v.selectedLookUpRecordsLength,0)}">
+                        <ui:inputTextArea aura:id="add-message" class="slds-m-top_xx-large" label="" value="Add a message..." rows="3"/>
+                    </aura:if>
+                    <div>
+                        <aura:if isTrue="{!v.openAccessView}">
+                            <h1 onclick="{!c.openShareAccordian}" class="slds-m-top_xx-large slds-m-bottom_medium slds-text-heading_small"><lightning:icon iconName="utility:chevrondown" size="xx-small"/> Who Can Access</h1>
+                            
+                            <table aura:id="table--view" class="slds-m-top_large slds-table slds-table_bordered slds-resizable slds-table_resizable-cols slds-table_fixed-layout" role="grid">
+                                <tbody>
+                                    <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="mySpinner"/>
+                                    <aura:iteration items="{!v.accessContentData}" var="data" indexVar="index">
+                                        <tr>
+                                            <td>
+                                                <lightning:icon iconName="{!'standard:' + data.iconName}" size="x-medium"/>
+                                            </td>
+                                            <td>
+                                                {!data.name}
+                                            </td>
+                                            <td colspan="2">
+                                                <aura:if isTrue="{!and(v.contentOwnerId != data.linkedEntityId, data.accessMenuAction != '[]')}">
+                                                    <c:uiSelect options="{!data.accessMenuAction}" linkedEntityId="{!data.linkedEntityId}" contentDocumentId="{!v.contentDocumentId}" infoText="{!data.infoText}" disabled="false"/>
+                                                    <aura:set attribute="else">
+                                                        <c:uiSelect options="{!data.accessMenuAction}" infoText="{!data.infoText}" disabled="true"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </td>
+                                            <aura:if isTrue="{!v.contentOwnerId != data.linkedEntityId}">
+                                                <div class="slds-clearfix">
+                                                    <div class="slds-clearfix">
+                                                        <div id="{!data.linkedEntityId + '--' + data.name}" class="slds-float_none slds-p-left_medium slds-p-top_small" title="Unshare" onclick="{! c.openDeleteShare}">
+                                                            <lightning:buttonIcon iconName="utility:close" variant="bare" alternativeText="Unshare"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            <div class="slds-m-top_medium slds-box slds-box_xx-small" style="background-color:rgb(243, 242, 242);">
+                                <div style="padding-left: 1rem; position: relative;">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__icon slds-align-middle">
+                                            OWNER SETTINGS
+                                            <button class="slds-button slds-button_icon slds-button slds-button_icon slds-m-left_xx-small" onmouseover="{!c.openToolTip}" onmouseout="{!c.closeToolTip}" aria-describedby="help" title="Help">
+                                                <lightning:icon iconName="utility:info" class="slds-button__icon slds-m-bottom_xx-small" size="xx-small"/>
+                                                <span class="slds-assistive-text">Help</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left tooltip-invisible slds-hide" role="tooltip" aura:id="help" style="position: absolute; top: -78px; left: 21%;">
+                                        <div class="slds-popover__body">If the file has a public link, those with access to the file can still view and share the link when this setting is enabled.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-form-element slds-m-top_medium slds-m-left_small">
+                                <div class="slds-form-element__control">
+                                    <aura:if isTrue="{!v.sharingOption == 'R'}">
+                                        <span class="slds-checkbox">
+                                            <input type="checkbox" name="options" onclick="{!c.updateSharingPrivacy}" checked="true" id="{!v.contentVersionId}"/>
+                                            <label class="slds-checkbox__label" for="{!v.contentVersionId}">
+                                                <span class="slds-checkbox_faux"></span>
+                                                <span class="slds-form-element__label">Prevent others from sharing and unsharing</span>
+                                            </label>
+                                        </span>
+                                        <aura:set attribute="else">
+                                            <span class="slds-checkbox">
+                                                <input type="checkbox" name="options" onclick="{!c.updateSharingPrivacy}" id="{!v.contentVersionId}"/>
+                                                <label class="slds-checkbox__label" for="{!v.contentVersionId}">
+                                                    <span class="slds-checkbox_faux"></span>
+                                                    <span class="slds-form-element__label">Prevent others from sharing and unsharing</span>
+                                                </label>
+                                            </span>
+                                        </aura:set>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            
+                            <aura:set attribute="else">
+                                <h1 onclick="{!c.openShareAccordian}" class="slds-m-top_xx-large slds-m-bottom_medium slds-text-heading_small"><lightning:icon iconName="utility:chevronright" size="xx-small"/> Who Can Access</h1>
+                            </aura:set>
+                        </aura:if>  
+                    </div>
+                </div>
+                <div class="slds-modal__footer">
+                    <aura:if isTrue="{!greaterthan(v.selectedLookUpRecordsLength,0)}">
+                        <button class="slds-button slds-button--neutral" onclick="{!c.closeModel}" >Cancel</button>
+                        <button class="slds-button slds-button--brand" id="{!v.contentDocumentId + '--' + v.contentVersionId}" onclick="{!c.doShare}">Share</button>
+                        <aura:set attribute="else">
+                            <button class="slds-button slds-button--brand" id="{!v.contentDocumentId}" onclick="{!c.closeModel}">Done</button>
+                        </aura:set>
+                    </aura:if>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.unshare}">
+                <div role="dialog" tabindex="-1" aria-labelledby="header99" class="slds-modal slds-fade-in-open ">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__header">
+                            <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.cancelShare}">
+                                X
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                            <h2 id="header99" class="slds-text-heading--medium">Are you sure ?</h2>
+                        </div>
+                        <div class="slds-modal__content slds-p-around--medium">
+                            <p>Stop sharing the file with {!v.userName} ?</p>
+                        </div>
+                        <div class="slds-modal__footer">
+                            <button class="slds-button slds-button--neutral" onclick="{!c.cancelShare}" >Cancel</button>
+                            <button class="slds-button slds-button--brand" id="{!v.linkedEntityId + '--' + v.contentVersionId + '--' + v.contentDocumentId}" onclick="{!c.deleteShare}">Unshare</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-backdrop slds-backdrop--open"></div>
+            </aura:if>
+        </div>
+        <div class="slds-backdrop slds-backdrop--open"></div> 
+        
+    </aura:if>
+</aura:component>

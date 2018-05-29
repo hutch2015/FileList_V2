@@ -1,0 +1,14 @@
+.THIS .inputSize {
+    width:100%; 
+}
+.THIS .slds-dropdown{
+    left:28% !important;
+    position:fixed !important;
+}
+.THIS .slds-dropdown_fluid{
+    max-width:50% !important;
+}
+.THIS .dropdown_height{
+   min-height:40px;
+   margin-top:0px !important;
+}
